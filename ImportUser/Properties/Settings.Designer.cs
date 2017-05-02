@@ -112,5 +112,14 @@ namespace ImportUser.Properties {
                 return ((int)(this["emailColumn"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int subOpGroupColumn {
+            get {
+                return ((int)(this["subOpGroupColumn"]));
+            }
+        }
     }
 }

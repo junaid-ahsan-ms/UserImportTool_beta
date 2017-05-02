@@ -13,6 +13,14 @@ namespace ImportUser
 {
     class Program
     {
+        public enum UserImportFileType
+        {
+            CSA = 0,
+            OpsRisk,
+            Governance,
+            Undefined
+        }
+
         static void Main( string[] args )
         {
             string sDebug = String.Empty;
@@ -21,20 +29,28 @@ namespace ImportUser
             try
             {
 
-                if ( args.Length > 0 )
+                if ( args.Length == 2 && !string.IsNullOrEmpty( args[0] ) )
                 {
-                    #region Read User data file
+                    #region Get Filename and Type Then Read User data file
                     sDebug = "Finding file";
                     Console.WriteLine( "filename: {0}", args[0] );
-                    //@"D:\My Engagements\BMO IAAP\User Import\CSA Data Master Unpivtoed (March 13 2017)_Edited_v0.1.csv"
+
                     FileStream fs = File.OpenRead( args[0] );
 
                     sDebug = "Reading file";
                     StreamReader sr = new StreamReader( fs );
                     string fileContent = sr.ReadToEnd();
 
+                    sDebug = "Determining File Type";
+                    UserImportFileType fileType = UserImportFileType.Undefined;
+                    Enum.TryParse<UserImportFileType>( args[1], out fileType );
+                    if ( fileType == UserImportFileType.Undefined )
+                    {
+                        throw new ArgumentException( "Incorrect Filetype argument" );
+                    }
+
                     sDebug = "Reading rows";
-                    string [] fileRows = fileContent.Split( new string[] { "\r\n" },StringSplitOptions.RemoveEmptyEntries );
+                    string[] fileRows = fileContent.Split( new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries );
                     Console.WriteLine( "Rows read: {0}", fileRows.Length );
                     #endregion
 
@@ -44,7 +60,8 @@ namespace ImportUser
                     SqlConnection conn = new SqlConnection( Settings.Default.dbConnectionString );
                     conn.Open();
                     #endregion
-                    
+
+
                     // Loop through the rows - skipping the first row
                     for ( int row = Settings.Default.rowToStart; row < fileRows.Length; row++ )
                     {
@@ -59,13 +76,15 @@ namespace ImportUser
                         bool isExistingUser = false;
                         string userId = String.Empty;
 
+                        
                         sDebug = "checking if the user already exists " + rowNum;
                         string userName = columns[Settings.Default.nameColumn].Trim().Replace( "'", "''" );
+                        string userEmail = columns[Settings.Default.emailColumn];
                         SqlCommand checkUserSql = conn.CreateCommand();
-                        checkUserSql.CommandText = "select id from AspNetUsers where Name = '" + userName + "'";
+                        checkUserSql.CommandText = "select id from AspNetUsers where Email = '" + userEmail + "'";
 
                         sDebug += "\r\n" + checkUserSql.CommandText;
-                        userId = (string)(checkUserSql.ExecuteScalar());
+                        userId = ( string )(checkUserSql.ExecuteScalar());
                         checkUserSql.Dispose();
                         if ( string.IsNullOrEmpty( userId ) )
                         {
@@ -79,12 +98,14 @@ namespace ImportUser
                         #endregion
 
 
+                        #region not requried anymore
                         // check if user data file has email address for them
-                        string userEmail = columns[Settings.Default.emailColumn];
-                        if ( string.IsNullOrEmpty( userEmail ) && Settings.Default.createEmail )
-                        {
-                            userEmail = columns[Settings.Default.nameColumn].Trim().Replace( "'", "" ).Replace( ' ', '.' ) + "@bmo.com";
-                        }
+                        //string userEmail = columns[Settings.Default.emailColumn];
+                        //if ( string.IsNullOrEmpty( userEmail ) && Settings.Default.createEmail )
+                        //{
+                        //    userEmail = columns[Settings.Default.nameColumn].Trim().Replace( "'", "" ).Replace( ' ', '.' ) + "@bmo.com";
+                        //}
+                        #endregion
 
 
                         if ( !isExistingUser )
@@ -104,163 +125,240 @@ namespace ImportUser
                             sDebug = "executing create user query" + rowNum + "\r\n" + userRecordSql.CommandText;
                             userRecordSql.ExecuteNonQuery();
                             userRecordSql.Dispose();
+                            #endregion                            
+                        }
+
+
+
+                        if ( fileType == UserImportFileType.CSA )
+                        {
+
+                            // Write CsaAttributes
+                            sDebug = "creating CsaAttributes record for the user";
+                            SqlCommand csaAttributeSql = conn.CreateCommand();
+                            csaAttributeSql.CommandText = "insert into CsaAttributes(AppUserId, OperatingGroup, SubOperatingGroup, " +
+                                "LineOfBusiness, Jurisdiction, CorporateServiceArea) Values('" + userId + "', '" + 
+                                GetOpId( columns[Settings.Default.opGroupColumn] ) + "', '" + 
+                                GetSubOpId( columns[Settings.Default.subOpGroupColumn] ) + "', '" + 
+                                GetLobId( columns[Settings.Default.lobColumn] ) + "', '" + 
+                                GetJuriId( columns[Settings.Default.jurisdictionColumn] ) + "', '" + 
+                                GetCorpId( columns[Settings.Default.corpAreaColumn] ).CorporateServiceArea + "')";
+
+                            sDebug = "executing create CsaAttributes query" + rowNum + "\r\n" + csaAttributeSql.CommandText;
+                            csaAttributeSql.ExecuteNonQuery();
+                            csaAttributeSql.Dispose();
+
+
+                            // Write record in CsaApprovalRole
+                            sDebug = "Add record in CsaApproval Role";
+                            SqlCommand opsRiskApproverRoleSql = conn.CreateCommand();
+                            opsRiskApproverRoleSql.CommandText = "insert into CsaApproval(ApproverId, Status, CreateDate, " +
+                                "CorporateServiceAreaId) Values('" + userId + "', 0, '" + DateTime.Now + 
+                                "', " + GetCorpId( columns[Settings.Default.corpAreaColumn] ).CorporateServiceArea + ")";
+
+                            sDebug = "executing add CSA Approver Role query" + rowNum + "\r\n" +
+                                opsRiskApproverRoleSql.CommandText;
+                            opsRiskApproverRoleSql.ExecuteNonQuery();
+                            opsRiskApproverRoleSql.Dispose();
+
+                            #region Not Required Anymore
+
+                            //#region create Line of Business App Users record(s)
+                            //if ( string.IsNullOrEmpty( columns[Settings.Default.lobColumn] ) )
+                            //{
+                            //    sDebug = "creating all possible LineOfBusinessAppUsers" + rowNum;
+                            //    for ( int i = 1; i < 39; i++ )
+                            //    {
+                            //        SqlCommand lobUserSql = conn.CreateCommand();
+                            //        lobUserSql.CommandText = "insert into LineofBusinessAppUsers" +
+                            //            "    ( LineOfBusiness_id, AppUser_Id ) " +
+                            //            "values" +
+                            //            "    ( " + i + ", '" + userId + "' )";
+
+                            //        sDebug = "executing create LineOfBusinessAppUser query" + rowNum + "\r\n" + lobUserSql.CommandText;
+                            //        lobUserSql.ExecuteNonQuery();
+                            //        lobUserSql.Dispose();
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    sDebug = "creating specific LineOfBusinessappUsers" + rowNum;
+                            //    int lobId = GetLobId( columns[Settings.Default.lobColumn].Trim() );
+                            //    SqlCommand lobUserSql = conn.CreateCommand();
+                            //    lobUserSql.CommandText = "insert into LineofBusinessAppUsers" +
+                            //        "    ( LineOfBusiness_id, AppUser_Id ) " +
+                            //        "values" +
+                            //        "    ( " + lobId + ", '" + userId + "' )";
+
+                            //    sDebug = "executing create LineOfBusinessAppUser query" + rowNum + "\r\n" + lobUserSql.CommandText;
+                            //    lobUserSql.ExecuteNonQuery();
+                            //    lobUserSql.Dispose();
+                            //}
+                            //#endregion
+
+
+                            //#region create Jurisdiction App Users record(s)
+                            //if ( string.IsNullOrEmpty( columns[Settings.Default.jurisdictionColumn] ) )
+                            //{
+                            //    sDebug = "creating all possible JurisdictionAppUsers" + rowNum;
+                            //    for ( int i = 1; i < 9; i++ )
+                            //    {
+                            //        SqlCommand jurisdictionUserSql = conn.CreateCommand();
+                            //        jurisdictionUserSql.CommandText = "insert into JurisdictionAppUsers" +
+                            //        "    ( Jurisdiction_Id, AppUser_Id ) " +
+                            //        "values" +
+                            //        "    ( " + i + ", '" + userId + "' )";
+
+                            //        sDebug = "executing create JurisdictionAppUsers query" + rowNum + "\r\n" + jurisdictionUserSql.CommandText;
+                            //        jurisdictionUserSql.ExecuteNonQuery();
+                            //        jurisdictionUserSql.Dispose();
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    sDebug = "creating specific JurisdictionAppUsers" + rowNum;
+                            //    int juriId = GetJuriId( columns[Settings.Default.jurisdictionColumn].Trim() );
+                            //    SqlCommand jurisdictionUserSql = conn.CreateCommand();
+                            //    jurisdictionUserSql.CommandText = "insert into JurisdictionAppUsers" +
+                            //    "    ( Jurisdiction_Id, AppUser_Id ) " +
+                            //    "values" +
+                            //    "    ( " + juriId + ", '" + userId + "' )";
+
+                            //    sDebug = "executing create JurisdictionAppUsers query" + rowNum + "\r\n" + jurisdictionUserSql.CommandText;
+                            //    jurisdictionUserSql.ExecuteNonQuery();
+                            //    jurisdictionUserSql.Dispose();
+                            //}
+                            //#endregion
+
+
+                            //#region create Corporate Service Area User record(s)
+                            //if ( string.IsNullOrEmpty( columns[Settings.Default.corpAreaColumn] ) )
+                            //{
+                            //    sDebug = "creating all possible CorporateServiceAreaAppUsers" + rowNum;
+                            //    for ( int i = 1; i < 29; i++ )
+                            //    {
+                            //        SqlCommand corpServAreaUserSql = conn.CreateCommand();
+                            //        corpServAreaUserSql.CommandText = "insert into CorporateServiceAreaAppUsers" +
+                            //        "    ( CorporateServiceArea_Id, AppUser_Id ) " +
+                            //        "values" +
+                            //        "    ( " + i + ", '" + userId + "' )";
+
+                            //        sDebug = "executing create CorporateServiceAreaAppUsers query" + rowNum + "\r\n" + corpServAreaUserSql.CommandText;
+                            //        corpServAreaUserSql.ExecuteNonQuery();
+                            //        corpServAreaUserSql.Dispose();
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    sDebug = "creating specific CorporateServiceAreaAppUsers" + rowNum;
+                            //    int corpId = GetCorpId( columns[Settings.Default.corpAreaColumn].Trim() );
+                            //    SqlCommand corpServAreaUserSql = conn.CreateCommand();
+                            //    corpServAreaUserSql.CommandText = "insert into CorporateServiceAreaAppUsers" +
+                            //    "    ( CorporateServiceArea_Id, AppUser_Id ) " +
+                            //    "values" +
+                            //    "    ( " + corpId + ", '" + userId + "' )";
+
+                            //    sDebug = "executing create CorporateServiceAreaAppUsers query" + rowNum + "\r\n" + corpServAreaUserSql.CommandText;
+                            //    corpServAreaUserSql.ExecuteNonQuery();
+                            //    corpServAreaUserSql.Dispose();
+                            //}
+                            //#endregion
+
                             #endregion
 
-
-                            #region create Operating Group record(s)                        
-                            if ( string.IsNullOrEmpty( columns[Settings.Default.opGroupColumn] ) )
-                            {
-                                //sDebug = "creating all possible OperatingGroups" + rowNum;
-                                //for ( int i = 1; i < 11; i++ )
-                                //{
-                                //    SqlCommand operatingGroupSql = conn.CreateCommand();
-                                //    operatingGroupSql.CommandText = "insert into OperatingGroupAppUsers" +
-                                //    "    ( OperatingGroup_Id, AppUser_Id ) " +
-                                //    "values" +
-                                //    "    ( " + i + ", '" + userId + "' )";
-
-                                //    sDebug = "executing create OperatingGroup query" + rowNum + "\r\n" + operatingGroupSql.CommandText;
-                                //    operatingGroupSql.ExecuteNonQuery();
-                                //    operatingGroupSql.Dispose();
-                                //}
-                            }
-                            else
-                            {
-                                sDebug = "creating specific OperatingGroup" + rowNum;
-                                int opId = GetOpId( columns[Settings.Default.opGroupColumn].Trim() );
-                                SqlCommand operatingGroupSql = conn.CreateCommand();
-                                operatingGroupSql.CommandText = "insert into OperatingGroupAppUsers" +
-                                    "    ( OperatingGroup_Id, AppUser_Id ) " +
-                                    "values" +
-                                    "    ( " + opId + ", '" + userId + "' )";
-
-                                sDebug = "executing create OperatingGroup query" + rowNum + "\r\n" + operatingGroupSql.CommandText;
-                                operatingGroupSql.ExecuteNonQuery();
-                                operatingGroupSql.Dispose();
-                            }
-                            #endregion
                         }
-
-
-                        #region create Line of Business App Users record(s)
-                        if ( string.IsNullOrEmpty( columns[Settings.Default.lobColumn] ) )
+                        else if ( fileType == UserImportFileType.OpsRisk )
                         {
-                            sDebug = "creating all possible LineOfBusinessAppUsers" + rowNum;
-                            for ( int i = 1; i < 39; i++ )
-                            {
-                                SqlCommand lobUserSql = conn.CreateCommand();
-                                lobUserSql.CommandText = "insert into LineofBusinessAppUsers" +
-                                    "    ( LineOfBusiness_id, AppUser_Id ) " +
-                                    "values" +
-                                    "    ( " + i + ", '" + userId + "' )";
 
-                                sDebug = "executing create LineOfBusinessAppUser query" + rowNum + "\r\n" + lobUserSql.CommandText;
-                                lobUserSql.ExecuteNonQuery();
-                                lobUserSql.Dispose();
-                            }
+                            // Write OpsRisk Record
+                            sDebug = "creating OpsRiskAttributes record for the user";
+                            SqlCommand opsRiskSql = conn.CreateCommand();
+                            opsRiskSql.CommandText = "insert into OpsRiskAttributes(AppUserId, LineOfBusiness) Values('" + 
+                                userId + "', '" + GetLobId( columns[Settings.Default.lobColumn] ) + "')";
+
+                            sDebug = "executing create OpsRiskAttributes query" + rowNum + "\r\n" + opsRiskSql.CommandText;
+                            opsRiskSql.ExecuteNonQuery();
+                            opsRiskSql.Dispose();
+
+
+                            //TODO: Write record in OpsRiskApprovalRole
+                            sDebug = "Write record in OpsRiskApprovalRole";
+                            SqlCommand opsRiskApproverRoleSql = conn.CreateCommand();
+                            opsRiskApproverRoleSql.CommandText = "insert into OpsRiskAttributes(AppUserId, LineOfBusiness) Values('" +
+                                columns[0] + "', '" + columns[0] + "')";
+
+                            sDebug = "executing create OpsRiskApproval query" + rowNum + "\r\n" + 
+                                opsRiskApproverRoleSql.CommandText;
+                            opsRiskApproverRoleSql.ExecuteNonQuery();
+                            opsRiskApproverRoleSql.Dispose();
+
                         }
-                        else
+                        else if ( fileType == UserImportFileType.Governance )
                         {
-                            sDebug = "creating specific LineOfBusinessappUsers" + rowNum;
-                            int lobId = GetLobId( columns[Settings.Default.lobColumn].Trim() );
-                            SqlCommand lobUserSql = conn.CreateCommand();
-                            lobUserSql.CommandText = "insert into LineofBusinessAppUsers" +
-                                "    ( LineOfBusiness_id, AppUser_Id ) " +
-                                "values" +
-                                "    ( " + lobId + ", '" + userId + "' )";
 
-                            sDebug = "executing create LineOfBusinessAppUser query" + rowNum + "\r\n" + lobUserSql.CommandText;
-                            lobUserSql.ExecuteNonQuery();
-                            lobUserSql.Dispose();
+                            // Write Governance Record
+                            sDebug = "creating GovernanceAttributes record for the user";
+                            SqlCommand governanceAttributeSql = conn.CreateCommand();
+                            governanceAttributeSql.CommandText = "insert into GovernanceAttributes(AppUserId, OperatingGroup, " +
+                                "SubOperatingGroup, LineOfBusiness) Values('" + userId + "', '" + 
+                                GetOpId( columns[Settings.Default.opGroupColumn] ) + "', '" + 
+                                GetSubOpId( columns[Settings.Default.subOpGroupColumn] ) + "', '" + 
+                                GetLobId( columns[Settings.Default.lobColumn] ) + "')";
+
+                            sDebug = "executing create GovernanceAttributes query" + rowNum + "\r\n" + 
+                                governanceAttributeSql.CommandText;
+                            governanceAttributeSql.ExecuteNonQuery();
+                            governanceAttributeSql.Dispose();
+
+
+                            //TODO: Write record in OpsRiskApprovalRole
+                            sDebug = "Write record in govApproverRole";
+                            SqlCommand govApproverRoleSql = conn.CreateCommand();
+                            govApproverRoleSql.CommandText = "insert into GovernanceApproval(AppUserId, LineOfBusiness) Values('" +
+                                columns[0] + "', '" + columns[0] + "')";
+
+                            sDebug = "executing create govApproverRole query" + rowNum + "\r\n" +
+                                govApproverRoleSql.CommandText;
+                            govApproverRoleSql.ExecuteNonQuery();
+                            govApproverRoleSql.Dispose();
+
                         }
-                        #endregion
-
-
-                        #region create Jurisdiction App Users record(s)
-                        if ( string.IsNullOrEmpty( columns[Settings.Default.jurisdictionColumn] ) )
-                        {
-                            sDebug = "creating all possible JurisdictionAppUsers" + rowNum;
-                            for ( int i = 1; i < 9; i++ )
-                            {
-                                SqlCommand jurisdictionUserSql = conn.CreateCommand();
-                                jurisdictionUserSql.CommandText = "insert into JurisdictionAppUsers" +
-                                "    ( Jurisdiction_Id, AppUser_Id ) " +
-                                "values" +
-                                "    ( " + i + ", '" + userId + "' )";
-
-                                sDebug = "executing create JurisdictionAppUsers query" + rowNum + "\r\n" + jurisdictionUserSql.CommandText;
-                                jurisdictionUserSql.ExecuteNonQuery();
-                                jurisdictionUserSql.Dispose();
-                            }
-                        }
-                        else
-                        {
-                            sDebug = "creating specific JurisdictionAppUsers" + rowNum;
-                            int juriId = GetJuriId( columns[Settings.Default.jurisdictionColumn].Trim() );
-                            SqlCommand jurisdictionUserSql = conn.CreateCommand();
-                            jurisdictionUserSql.CommandText = "insert into JurisdictionAppUsers" +
-                            "    ( Jurisdiction_Id, AppUser_Id ) " +
-                            "values" +
-                            "    ( " + juriId + ", '" + userId + "' )";
-
-                            sDebug = "executing create JurisdictionAppUsers query" + rowNum + "\r\n" + jurisdictionUserSql.CommandText;
-                            jurisdictionUserSql.ExecuteNonQuery();
-                            jurisdictionUserSql.Dispose();
-                        }
-                        #endregion
-
-
-                        #region create Corporate Service Area User record(s)
-                        if ( string.IsNullOrEmpty( columns[Settings.Default.corpAreaColumn] ) )
-                        {
-                            sDebug = "creating all possible CorporateServiceAreaAppUsers" + rowNum;
-                            for ( int i = 1; i < 29; i++ )
-                            {
-                                SqlCommand corpServAreaUserSql = conn.CreateCommand();
-                                corpServAreaUserSql.CommandText = "insert into CorporateServiceAreaAppUsers" +
-                                "    ( CorporateServiceArea_Id, AppUser_Id ) " +
-                                "values" +
-                                "    ( " + i + ", '" + userId + "' )";
-
-                                sDebug = "executing create CorporateServiceAreaAppUsers query" + rowNum + "\r\n" + corpServAreaUserSql.CommandText;
-                                corpServAreaUserSql.ExecuteNonQuery();
-                                corpServAreaUserSql.Dispose();
-                            }
-                        }
-                        else
-                        {
-                            sDebug = "creating specific CorporateServiceAreaAppUsers" + rowNum;
-                            int corpId = GetCorpId( columns[Settings.Default.corpAreaColumn].Trim() );
-                            SqlCommand corpServAreaUserSql = conn.CreateCommand();
-                            corpServAreaUserSql.CommandText = "insert into CorporateServiceAreaAppUsers" +
-                            "    ( CorporateServiceArea_Id, AppUser_Id ) " +
-                            "values" +
-                            "    ( " + corpId + ", '" + userId + "' )";
-
-                            sDebug = "executing create CorporateServiceAreaAppUsers query" + rowNum + "\r\n" + corpServAreaUserSql.CommandText;
-                            corpServAreaUserSql.ExecuteNonQuery();
-                            corpServAreaUserSql.Dispose();
-                        }
-                        #endregion
                     }
 
                 }
                 else
                 {
-                    Console.WriteLine( "no filename" );
+                    Console.WriteLine( "Incorrect Arguments" );
+                    DisplayUsage();
                     bError = true;
                 }
-                
+
+            }
+            catch ( ArgumentException ae )
+            {
+                Console.WriteLine( "exception occured when {0}:\r\n{1}", sDebug, ae.Message );
+                DisplayUsage();
+                bError = true;
             }
             catch ( Exception e )
             {
                 Console.WriteLine( "exception occured when {0}:\r\n{1}", sDebug, e.Message );
                 bError = true;
             }
-
-            Console.WriteLine( "User Import process completed " + (bError ? "with errors" : "successfully") + "..." );
+            finally
+            {
+                Console.WriteLine( "User Import process completed " + (bError ? "with errors" : "successfully") + "..." );
+            }
+            
             Console.ReadKey();
         }
+
+        static void DisplayUsage( )
+        {
+            Console.WriteLine( "Usage: Program.exe <fileName> <fileType: 0=CSA, 1=OpsRisk, 2=Governance>" );
+            Console.WriteLine( "Note: User must have access to the Iaap database" );
+        }
+
 
         #region Name to ID mapping functions for user properties
 
@@ -270,36 +368,51 @@ namespace ImportUser
 
             switch ( opText )
             {
-                case "P&C CA":
+                case "Canadian P&C":
                     result = 1;
                     break;
-                //case "P&C US":
-                //    result = 2;     // same as 9
-                //    break;
-                case "BMO CM":
-                    result = 3;
-                    break;
-                //case "Wealth Management":   // same as 7
-                //    result = 4;
-                //    break;
-                case "T&O":
-                    result = 5;
+                case "Capital Markets":
+                    result = 2;     
                     break;
                 case "Corporate":
-                    result = 6;
+                    result = 3;
                     break;
-                case "Wealth Management":
-                    result = 7;
-                    break;
-                case "Asset Management":
-                    result = 8;
+                case "T&O":
+                    result = 4;
                     break;
                 case "US P&C":
-                    result = 9;
+                    result = 5;
+                    break;
+                case "Wealth Management":
+                    result = 6;
+                    break;
+                default:
+                    break;
+            }
+            return result;
+        }
+
+        static int GetSubOpId( string opText )
+        {
+            int result = 0;
+
+            switch ( opText )
+            {
+                case "Canadian P&C":
+                    result = 1;
+                    break;
+                case "Asset Management":
+                    result = 2;
+                    break;
+                case "T&O":
+                    result = 3;
                     break;
                 case "NA Commercial":
-                    result = 10;
+                    result = 4;
                     break;
+                case "Wealth Management":
+                    result = 5;
+                    break;                
                 default:
                     break;
             }
@@ -312,119 +425,68 @@ namespace ImportUser
 
             switch ( lobText )
             {
-                case "AML":
+                case "Asia Growth":
                     result = 1;
                     break;
-                case "Audit":
+                case "BMO Insurance( Creditor & Reinsurance)":
                     result = 2;
                     break;
                 case "BMO InvestorLine":
                     result = 3;
                     break;
-                case "BMO Life Insurance":
+                case "BMO LIfe Assurance":
                     result = 4;
                     break;
-                case "BMO Nesbitt Burns":
+                case "BMO Private Banking":
                     result = 5;
                     break;
-                case "BMO Partners":
+                case "Canadian P&C - Business Bnaking":
                     result = 6;
                     break;
-                case "BMO Private Bank":
+                case "Canadian P&C - Personal":
                     result = 7;
                     break;
-                case "Channels":
+                case "Corporate Finance":
                     result = 8;
                     break;
-                case "Commercial Banking":
+                case "Corporate Real Estate":
                     result = 9;
                     break;
-                case "Corporate Banking":
+                case "Data Analyitcs":
                     result = 10;
                     break;
-                case "CorporateFinance Banking":
+                case "Full-Service Investing":
                     result = 11;
                     break;
-                case "Everyday Banking":
+                case "Global Asset Management":
                     result = 12;
                     break;
-                case "Finance & Communications":
+                case "Global Product Operations":
                     result = 13;
                     break;
-                case "GAM":
+                case "HQ":
                     result = 14;
                     break;
-                case "Global Trade & Banking":
+                case "IT Risk Management":
                     result = 15;
                     break;
-                case "HR":
+                case "North American Integrated Channels":
                     result = 16;
                     break;
-                case "Institutional Trust Services":
+                case "North American Retail Payments":
                     result = 17;
                     break;
-                case "Investment Banking":
+                case "North American Treasury & Payment Solutions":
                     result = 18;
                     break;
-                case "Legal":
+                case "Procurements":
                     result = 19;
                     break;
-                case "Marketing":
+                case "Technology":
                     result = 20;
                     break;
-                case "North American Retail Payments":
+                case "U.S. Personal Wealth (in $USD)":
                     result = 21;
-                    break;
-                case "Payment Cards":
-                    result = 22;
-                    break;
-                case "Payment Cards (US)":
-                    result = 23;
-                    break;
-                case "Personal Lending":
-                    result = 24;
-                    break;
-                case "Retail & Business Banking":
-                    result = 25;
-                    break;
-                case "Retail Collections":
-                    result = 26;
-                    break;
-                case "Risk":
-                    result = 27;
-                    break;
-                case "SAMU":
-                    result = 28;
-                    break;
-                case "SBSA":
-                    result = 29;
-                    break;
-                case "Strategy":
-                    result = 30;
-                    break;
-                case "Structured Notes":
-                    result = 31;
-                    break;
-                //case "Treasury & Payment Solutions":
-                //    result = 32;
-                //    break;
-                case "Term Investments":
-                    result = 33;
-                    break;
-                case "Trading Products":
-                    result = 34;
-                    break;
-                case "Trading Products (Equity Derivatives, Commodities)":
-                    result = 35;
-                    break;
-                case "Trading Products (Other Derivatives)":
-                    result = 36;
-                    break;
-                case "Trading Products (Securities Lending and Repos)":
-                    result = 37;
-                    break;
-                case "Treasury & Payment Solutions":
-                    result = 38;
                     break;
                 default:
                     result = 0;
@@ -440,32 +502,41 @@ namespace ImportUser
 
             switch ( juriText )
             {
-                case "Asia":
+                case "All":
                     result = 1;
                     break;
-                case "Canada":
+                case "Brazil":
                     result = 2;
                     break;
-                case "China":
+                case "Canada":
                     result = 3;
                     break;
-                case "EMEA":
+                case "China":
                     result = 4;
                     break;
-                case "Europe":
+                case "Hong Kong":
                     result = 5;
                     break;
-                case "Hong Kong":
+                case "India":
                     result = 6;
                     break;
-                case "International":
+                case "Ireland":
                     result = 7;
                     break;
-                case "Singapore":
+                case "Italy":
                     result = 8;
                     break;
-                case "US":
+                case "Mexico":
                     result = 9;
+                    break;
+                case "Singapore":
+                    result = 10;
+                    break;
+                case "UK - United Kingdom":
+                    result = 11;
+                    break;
+                case "US":
+                    result = 12;
                     break;
                 default:
                     result = 0;
@@ -475,99 +546,134 @@ namespace ImportUser
             return result;
         }
 
-        static int GetCorpId( string corpText )
+        static CorporateServiceAreaAndGroup GetCorpId( string corpText )
         {
-            int result = 0;
+            CorporateServiceAreaAndGroup result = new CorporateServiceAreaAndGroup();
 
             switch ( corpText )
             {
                 case "Accounting & Financial Management":                    
                 case "Accounting and Financial Management":
-                    result = 1;
-                    break;
                 case "Accounting & Financial Management Risk":
-                    result = 2;
-                    break;
+                    result.CorporateServiceArea = 13;
+                    result.CorporateServiceAreaGroup = 3;
+                    break;                
+
                 case "AML":
-                    result = 3;
+                case "Anti Money Laundering":
+                    result.CorporateServiceArea = 21;
+                    result.CorporateServiceAreaGroup = 6;
                     break;
+
                 case "Business Continuity":
-                    result = 4;
-                    break;
                 case "Business Continuity Risk":
-                    result = 5;
+                    result.CorporateServiceArea = 12;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
+
                 case "Credit Risk":
-                    result = 6;
-                    break;
-                case "Credit Risk - Business Banking":
-                    result = 7;
-                    break;
-                case "Credit Risk - Commercial":
-                    result = 8;
-                    break;
-                case "Credit Risk - Retail":
-                    result = 9;
-                    break;
                 case "Credit Risk & CCR":
-                    result = 10;
+                case "Credit Risk - Commercial":
+                case "Credit Risk - Retail":
+                case "Credit Risk - Business Banking":
+                    result.CorporateServiceArea = 7;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
+
                 case "Fraud/Criminal":
-                    result = 11;
+                    result.CorporateServiceArea = 5;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
+
                 case "Human Resources":
-                    result = 12;
+                    result.CorporateServiceArea = 20;
+                    result.CorporateServiceAreaGroup = 5;
                     break;
+
+                case "Information Security & Management":
                 case "Information Security & Information Management":
-                    result = 13;
+                    result.CorporateServiceArea = 16;
+                    result.CorporateServiceAreaGroup = 4;
                     break;
+
                 case "Legal":
-                    result = 14;
+                    result.CorporateServiceArea = 1;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
+
                 case "Liquidity and Funding":
-                    result = 15;
-                    break;
                 case "Liquidity and Funding Risk":
-                    result = 16;
+                    result.CorporateServiceArea = 9;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
+
+                case "Market Risk":
                 case "Market Risk (Trading, Structural)":
-                    result = 17;
-                    break;
                 case "Market Risk (Trading, Structural, CCR)":
-                    result = 18;
+                    result.CorporateServiceArea = 8;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
+
                 case "Model Risk":
-                    result = 19;
+                    result.CorporateServiceArea = 10;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
-                case "Outsourceing & Supplier":
-                    result = 20;
+
+                case "Outsourcing & Supplier":
+                    result.CorporateServiceArea = 17;
+                    result.CorporateServiceAreaGroup = 4;
                     break;
+
                 case "Physical Security":
-                    result = 21;
+                    result.CorporateServiceArea = 6;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
+
                 case "Privacy":
-                    result = 22;
+                    result.CorporateServiceArea = 3;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
-                case "Process & Operation Risk":
-                    result = 23;
+
+                case "Process & Operational Risk":
+                    result.CorporateServiceArea = 11;
+                    result.CorporateServiceAreaGroup = 2;
                     break;
+
                 case "Project Management":
-                    result = 24;
+                case "T&O - Project Management":
+                    result.CorporateServiceArea = 19;
+                    result.CorporateServiceAreaGroup = 4;
                     break;
+
                 case "Property":
-                    result = 25;
+                case "T&O Property":
+                    result.CorporateServiceArea = 18;
+                    result.CorporateServiceAreaGroup = 4;
                     break;
+
                 case "Regulatory Compliance":
-                    result = 26;
+                    result.CorporateServiceArea = 2;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
+
                 case "Reputation Risk":
-                    result = 27;
+                    result.CorporateServiceArea = 4;
+                    result.CorporateServiceAreaGroup = 1;
                     break;
+
                 case "Tax":
-                    result = 28;
+                    result.CorporateServiceArea = 14;
+                    result.CorporateServiceAreaGroup = 3;
                     break;
+
+                case "Technology":
+                    result.CorporateServiceArea = 15;
+                    result.CorporateServiceAreaGroup = 4;
+                    break;
+
                 default:
-                    result = 0;
+                    result.CorporateServiceArea = 0;
+                    result.CorporateServiceAreaGroup = 0;
                     break;
             }
 
@@ -578,5 +684,13 @@ namespace ImportUser
 
     }
 
-    
+    public struct CorporateServiceAreaAndGroup
+    {
+        public int CorporateServiceArea { get; set; }
+        public int CorporateServiceAreaGroup { get; set; }
+        public string CorporateServiceAreaName { get; set; }
+        public string CorporateServiceAreaGroupName { get; set; }
+    }
+
 }
+
