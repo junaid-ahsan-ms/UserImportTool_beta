@@ -44,54 +44,54 @@ namespace ImportUser.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("8")]
-        public int nameColumn {
+        public int NameColumn {
             get {
-                return ((int)(this["nameColumn"]));
+                return ((int)(this["NameColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("4")]
-        public int opGroupColumn {
+        public int csaOpGroupColumn {
             get {
-                return ((int)(this["opGroupColumn"]));
+                return ((int)(this["csaOpGroupColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("6")]
-        public int lobColumn {
+        public int csaLobColumn {
             get {
-                return ((int)(this["lobColumn"]));
+                return ((int)(this["csaLobColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public int corpAreaColumn {
+        public int csaCorpAreaColumn {
             get {
-                return ((int)(this["corpAreaColumn"]));
+                return ((int)(this["csaCorpAreaColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("7")]
-        public int jurisdictionColumn {
+        public int csaJurisdictionColumn {
             get {
-                return ((int)(this["jurisdictionColumn"]));
+                return ((int)(this["csaJurisdictionColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public int rowToStart {
+        public int csaRowToStart {
             get {
-                return ((int)(this["rowToStart"]));
+                return ((int)(this["csaRowToStart"]));
             }
         }
         
@@ -107,18 +107,153 @@ namespace ImportUser.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("9")]
-        public int emailColumn {
+        public int csaEmailColumn {
             get {
-                return ((int)(this["emailColumn"]));
+                return ((int)(this["csaEmailColumn"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("5")]
-        public int subOpGroupColumn {
+        public int csaSubOpGroupColumn {
             get {
-                return ((int)(this["subOpGroupColumn"]));
+                return ((int)(this["csaSubOpGroupColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool stopAtError {
+            get {
+                return ((bool)(this["stopAtError"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public int opsRiskOpGroupColumn {
+            get {
+                return ((int)(this["opsRiskOpGroupColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("6")]
+        public int opsRiskLobColumn {
+            get {
+                return ((int)(this["opsRiskLobColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int opsRiskCorpAreaColumn {
+            get {
+                return ((int)(this["opsRiskCorpAreaColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("7")]
+        public int opsRiskJurisdictionColumn {
+            get {
+                return ((int)(this["opsRiskJurisdictionColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9")]
+        public int opsRiskEmailColumn {
+            get {
+                return ((int)(this["opsRiskEmailColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int opsRiskRowToStart {
+            get {
+                return ((int)(this["opsRiskRowToStart"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int opsRiskSubOpGroupColumn {
+            get {
+                return ((int)(this["opsRiskSubOpGroupColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public int govOpGroupColumn {
+            get {
+                return ((int)(this["govOpGroupColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("6")]
+        public int govLobColumn {
+            get {
+                return ((int)(this["govLobColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int govCorpAreaColumn {
+            get {
+                return ((int)(this["govCorpAreaColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("7")]
+        public int govJurisdictionColumn {
+            get {
+                return ((int)(this["govJurisdictionColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9")]
+        public int govEmailColumn {
+            get {
+                return ((int)(this["govEmailColumn"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int govRowToStart {
+            get {
+                return ((int)(this["govRowToStart"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int govSubOpGroupColumn {
+            get {
+                return ((int)(this["govSubOpGroupColumn"]));
             }
         }
     }

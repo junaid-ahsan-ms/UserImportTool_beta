@@ -8,31 +8,76 @@
     <Setting Name="lastRunLog" Type="System.String" Scope="Application">
       <Value Profile="(Default)">b</Value>
     </Setting>
-    <Setting Name="nameColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="NameColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">8</Value>
     </Setting>
-    <Setting Name="opGroupColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaOpGroupColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">4</Value>
     </Setting>
-    <Setting Name="lobColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaLobColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">6</Value>
     </Setting>
-    <Setting Name="corpAreaColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaCorpAreaColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">2</Value>
     </Setting>
-    <Setting Name="jurisdictionColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaJurisdictionColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">7</Value>
     </Setting>
-    <Setting Name="rowToStart" Type="System.Int32" Scope="Application">
+    <Setting Name="csaRowToStart" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">1</Value>
     </Setting>
     <Setting Name="createEmail" Type="System.Boolean" Scope="Application">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="emailColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaEmailColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">9</Value>
     </Setting>
-    <Setting Name="subOpGroupColumn" Type="System.Int32" Scope="Application">
+    <Setting Name="csaSubOpGroupColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5</Value>
+    </Setting>
+    <Setting Name="stopAtError" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="opsRiskOpGroupColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="opsRiskLobColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">6</Value>
+    </Setting>
+    <Setting Name="opsRiskCorpAreaColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="opsRiskJurisdictionColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">7</Value>
+    </Setting>
+    <Setting Name="opsRiskEmailColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">9</Value>
+    </Setting>
+    <Setting Name="opsRiskRowToStart" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="opsRiskSubOpGroupColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5</Value>
+    </Setting>
+    <Setting Name="govOpGroupColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="govLobColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">6</Value>
+    </Setting>
+    <Setting Name="govCorpAreaColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="govJurisdictionColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">7</Value>
+    </Setting>
+    <Setting Name="govEmailColumn" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">9</Value>
+    </Setting>
+    <Setting Name="govRowToStart" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="govSubOpGroupColumn" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">5</Value>
     </Setting>
   </Settings>
