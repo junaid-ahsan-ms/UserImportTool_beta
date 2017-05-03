@@ -3,11 +3,11 @@ using System.IO;
 using System.Data;
 using System.Data.SqlClient;
 
-using ImportUser.Properties;
+using Bmo.Ent.Iaap.Util.ImportUser.Properties;
 using System.Diagnostics;
 
 
-namespace ImportUser
+namespace Bmo.Ent.Iaap.Util.ImportUser
 {
     /// <summary>
     /// This class provides the core application capability and hence provides the 
@@ -28,7 +28,7 @@ namespace ImportUser
         /// also adds the user to the appropriate approval role.
         /// </summary>
         /// <param name="args">command line arguments</param>
-        /// <returns></returns>
+        /// <returns>true if successful</returns>
         public bool Import( string[] args )
         {
             string sDebug = String.Empty;
@@ -74,7 +74,7 @@ namespace ImportUser
             #endregion
 
 
-            // Loop through the rows - skipping the first row
+            // Loop through the rows - skipping the configured number of rows
             for ( int row = Settings.Default.csaRowToStart; row < fileRows.Length; row++ )
             {
                 try
@@ -146,6 +146,10 @@ namespace ImportUser
             bool isExistingUser = false;
             userId = String.Empty;
 
+
+            //TODO: Consider caching user to reduce number of queries against the database
+
+
             sDebug = "checking if the user already exists " + rowNum;
             string userName = columns[Settings.Default.NameColumn].Trim().Replace( "'", "''" );
             string userEmail = columns[Settings.Default.csaEmailColumn].Trim().Replace( "'", "" );
@@ -171,11 +175,11 @@ namespace ImportUser
 
             #endregion
 
-
+            #region if its a new user then add them to the database
             if ( !isExistingUser )
             {
-                #region create user record
-                sDebug = "creating user record query" + rowNum;
+
+                sDebug = "creating a new user record query" + rowNum;
 
                 SqlCommand userRecordSql = conn.CreateCommand();
 
@@ -186,7 +190,7 @@ namespace ImportUser
 
 
                 userRecordSql.Parameters.Add( "@userId", SqlDbType.VarChar, 128 ).Value = userId;
-                userRecordSql.Parameters.Add( "@Name", SqlDbType.VarChar ).Value = userName.Replace( "'", "" );
+                userRecordSql.Parameters.Add( "@Name", SqlDbType.VarChar ).Value = userName.Replace( "'", "''" );
                 userRecordSql.Parameters.Add( "@modDate", SqlDbType.DateTime ).Value = DateTime.Now.ToString();
                 userRecordSql.Parameters.Add( "@userName", SqlDbType.VarChar, 256 ).Value = userEmail;
                 userRecordSql.Parameters.Add( "@userEmail", SqlDbType.VarChar, 256 ).Value = userEmail;
@@ -195,8 +199,9 @@ namespace ImportUser
                 sDebug = "executing create user query" + rowNum + "\r\n" + userRecordSql.CommandText;
                 userRecordSql.ExecuteNonQuery();
                 userRecordSql.Dispose();
-                #endregion
+                
             }
+            #endregion
         }
 
 
@@ -234,7 +239,7 @@ namespace ImportUser
                 "LastUpdated) Values(@userId, @opGroup, @subOpGroup, @lob, @jurisdiction, " +
                 "@corpArea, @dateCreated, @dateUpdated)";
 
-            csaAttributeSql.Parameters.Add( "@userId", SqlDbType.VarChar, 128 ).Value = userId;
+            csaAttributeSql.Parameters.Add( "@userId", SqlDbType.VarChar, 128 ).Value = userId; //TODO: should validate content of this field
             csaAttributeSql.Parameters.Add( "@opGroup", SqlDbType.Int ).Value =
                 GetOpId( columns[Settings.Default.csaOpGroupColumn] );
             csaAttributeSql.Parameters.Add( "@subOpGroup", SqlDbType.Int ).Value =
@@ -454,10 +459,10 @@ namespace ImportUser
 
         private bool ShouldWeContinueImport( SqlConnection conn, string tableName )
         {
-            SqlCommand opsRiskCountSql = conn.CreateCommand();
-            opsRiskCountSql.CommandText = "select count(*) from " + tableName;
-            int opsRiskCount = ( int )opsRiskCountSql.ExecuteScalar();
-            if ( opsRiskCount > 0 )
+            SqlCommand recordCountSql = conn.CreateCommand();
+            recordCountSql.CommandText = "select count(*) from " + tableName;
+            int recordCount = ( int )recordCountSql.ExecuteScalar();
+            if ( recordCount > 0 )
             {
                 Console.WriteLine( "Attention: There are existing records in {0}. " +
                     "Do you wish to Continue?\r\nPress x to continue importing and any other key to abort",
@@ -470,8 +475,8 @@ namespace ImportUser
             }
 
             Console.WriteLine();
-            Console.WriteLine( "Working..." );
             Console.WriteLine();
+            Console.WriteLine( "Working..." );            
 
             return true;
         }

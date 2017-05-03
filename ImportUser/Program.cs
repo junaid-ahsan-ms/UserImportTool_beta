@@ -3,17 +3,17 @@ using System.IO;
 using System.Data;
 using System.Data.SqlClient;
 
-using ImportUser.Properties;
+using Bmo.Ent.Iaap.Util.ImportUser.Properties;
 using System.Diagnostics;
 
-namespace ImportUser
+namespace Bmo.Ent.Iaap.Util.ImportUser
 {
 
     /// <summary>
     /// This is a console utility written for BMO IAAP project to help import Users
     /// for the IAAP web application and assign them to appropriate roles
     /// </summary>
-    class Program
+    class UserImportProgram
     {        
 
         static void Main( string[] args )
@@ -62,9 +62,10 @@ namespace ImportUser
             Console.ReadKey();
         }
 
+
         static void DisplayUsage( )
         {
-            Console.WriteLine( "Usage: Program.exe <fileName> <fileType: 0=CSA, 1=OpsRisk, 2=Governance>" );
+            Console.WriteLine( "Usage: ImportUser.exe <fileName> <fileType: 0=CSA, 1=OpsRisk, 2=Governance>" );
             Console.WriteLine( "Note: User must have access to the Iaap database" );
         }   
 
